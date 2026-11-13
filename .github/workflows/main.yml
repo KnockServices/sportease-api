@@ -1,0 +1,39 @@
+on:
+    push:
+        branches:
+            - main
+name: 🚀 Deploy website on push
+jobs:
+    web-deploy:
+        name: 🎉 Deploy
+        runs-on: ubuntu-latest
+        steps:
+            - name: 🚚 Get latest code
+              uses: actions/checkout@v3
+
+            - name: 📂 Sync files
+              uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+              with:
+                  server: ${{ secrets.ftp_host }}
+                  username: ${{ secrets.ftp_username }}
+                  password: ${{ secrets.ftp_password }}
+                  protocol: ftp
+                  local-dir: ./
+                  server-dir: ${{ secrets.ftp_host }}/api/
+                  exclude: |
+                      **/.git*
+                      **/.git*/**
+                      **/node_modules/**
+                      **/public/media/**
+
+            - name: 🤖 run php commands
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.ftp_host }}
+                  username: ${{ secrets.ftp_username }}
+                  password: ${{ secrets.ftp_password }}
+                  script: |
+                      export PATH=/usr/local/php84/bin:$PATH
+                      cd ${{ secrets.ftp_host }}/api
+                      php composer.phar install
+                      php artisan migrate --force
